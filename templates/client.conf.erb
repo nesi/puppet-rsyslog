@@ -1,24 +1,19 @@
 # file is managed by puppet
 
 # An "In-Memory Queue" is created for remote logging.
-$WorkDirectory <%= scope.lookupvar('rsyslog::params::spool_dir') -%>    # where to place spool files
+$WorkDirectory <%= scope.lookupvar('rsyslog::spool_dir') -%>    # where to place spool files
 $ActionQueueFileName queue      # unique name prefix for spool files
-$ActionQueueMaxDiskSpace 1g     # 1gb space limit (use as much as possible)
+$ActionQueueMaxDiskSpace <%= scope.lookupvar('rsyslog::client::spool_size') -%>     # spool space limit (use as much as possible)
 $ActionQueueSaveOnShutdown on   # save messages to disk on shutdown
 $ActionQueueType LinkedList     # run asynchronously
 $ActionResumeRetryCount -1      # infinety retries if host is down
 
-# Use ForwardFormat for remote logging
-$ActionFileDefaultTemplate RSYSLOG_ForwardFormat
-
 <% if scope.lookupvar('rsyslog::client::log_remote') -%>
 # Log to remote syslog server using <%= scope.lookupvar('rsyslog::client::remote_type') %>
-<% scope.lookupvar('rsyslog::client::servers').each do |server| -%>
 <% if scope.lookupvar('rsyslog::client::remote_type') == 'tcp' -%>
-*.* @@<%= server -%>:<%= scope.lookupvar('rsyslog::client::port') %>
+*.* @@<%= scope.lookupvar('rsyslog::client::server') -%>:<%= scope.lookupvar('rsyslog::client::port') -%>;RSYSLOG_ForwardFormat
 <% else -%>
-*.* @<%= server -%>:<%= scope.lookupvar('rsyslog::client::port') %>
-<% end -%>
+*.* @<%= scope.lookupvar('rsyslog::client::server') -%>:<%= scope.lookupvar('rsyslog::client::port') -%>;RSYSLOG_ForwardFormat
 <% end -%>
 <% end -%>
 
@@ -26,16 +21,17 @@ $ActionFileDefaultTemplate RSYSLOG_ForwardFormat
 # We log locally, restore to default format
 $ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
 
+<% if scope.lookupvar('rsyslog::log_style') == 'debian' -%>
 # Log auth messages locally
 auth,authpriv.*                 /var/log/auth.log
-
+<% elsif scope.lookupvar('rsyslog::log_style') == 'redhat' -%>
+# Log auth messages locally
+auth,authpriv.*                 /var/log/secure
 <% end -%>
-<% if scope.lookupvar('rsyslog::client::preserve_fqdn') -%>
-# Tell rsyslog to use FQDN and not short server names
-$PreserveFQDN on 
-
 <% end -%>
+
 <% if scope.lookupvar('rsyslog::client::log_local') -%>
+<% if scope.lookupvar('rsyslog::log_style') == 'debian' -%>
 # First some standard log files.  Log by facility.
 #
 *.*;auth,authpriv.none         -/var/log/syslog
@@ -93,4 +89,29 @@ daemon.*;mail.*;\
         news.err;\
         *.=debug;*.=info;\
         *.=notice;*.=warn       |/dev/xconsole
+<% elsif scope.lookupvar('rsyslog::log_style') == 'redhat' -%>
+# Log all kernel messages to the console.
+# Logging much else clutters up the screen.
+#kern.*                                                 /dev/console
+
+# Log anything (except mail) of level info or higher.
+# Don't log private authentication messages!
+*.info;mail.none;authpriv.none;cron.none                /var/log/messages
+
+# Log all the mail messages in one place.
+mail.*                         -/var/log/maillog
+
+
+# Log cron stuff
+cron.*                         /var/log/cron
+
+# Everybody gets emergency messages
+*.emerg                        *
+
+# Save news errors of level crit and higher in a special file.
+uucp,news.crit                 -/var/log/spooler
+
+# Save boot messages also to boot.log
+local7.*                       -/var/log/boot.log
+<% end -%>
 <% end -%>

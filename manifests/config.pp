@@ -1,37 +1,50 @@
+# == Class: rsyslog::config
+#
+# Full description of class role here.
+#
+# === Parameters
+#
+# === Variables
+#
+# === Examples
+#
+#  class { 'rsyslog::config': }
+#
 class rsyslog::config {
-    file { $rsyslog::params::rsyslog_d:
-        owner   => root,
-        group   => $rsyslog::params::run_group,
-        purge   => true,
-        recurse => true,
-        force   => true,
-        require => Class["rsyslog::install"],
-        ensure  => directory,
-    }
+  file { $rsyslog::rsyslog_d:
+    ensure  => directory,
+    owner   => 'root',
+    group   => $rsyslog::run_group,
+    purge   => $rsyslog::purge_rsyslog_d,
+    recurse => true,
+    force   => true,
+    require => Class['rsyslog::install'],
+  }
 
-    file { $rsyslog::params::rsyslog_conf:
-        owner   => root,
-        group   => $rsyslog::params::run_group,
-        ensure  => file,
-        content => template("${module_name}/rsyslog.conf.erb"),
-        require => Class["rsyslog::install"],
-        notify  => Class["rsyslog::service"],
-    }
+  file { $rsyslog::rsyslog_conf:
+    ensure  => file,
+    owner   => 'root',
+    group   => $rsyslog::run_group,
+    content => template("${module_name}/rsyslog.conf.erb"),
+    require => Class['rsyslog::install'],
+    notify  => Class['rsyslog::service'],
+  }
 
-    file { $rsyslog::params::rsyslog_default:
-        owner   => root,
-        group   => $rsyslog::params::run_group,
-        ensure  => file,
-        source  => "puppet:///modules/rsyslog/rsyslog_default",
-        require => Class["rsyslog::install"],
-        notify  => Class["rsyslog::service"],
-    }
+  file { $rsyslog::rsyslog_default:
+    ensure  => file,
+    owner   => 'root',
+    group   => $rsyslog::run_group,
+    source  => 'puppet:///modules/rsyslog/rsyslog_default',
+    require => Class['rsyslog::install'],
+    notify  => Class['rsyslog::service'],
+  }
 
-    file { $rsyslog::params::spool_dir:
-        owner   => root,
-        group   => $rsyslog::params::run_group,
-        ensure  => directory,
-        require => Class["rsyslog::install"],
-        notify  => Class["rsyslog::service"],
-    }
+  file { $rsyslog::spool_dir:
+    ensure  => directory,
+    owner   => 'root',
+    group   => $rsyslog::run_group,
+    require => Class['rsyslog::install'],
+    notify  => Class['rsyslog::service'],
+  }
+
 }
