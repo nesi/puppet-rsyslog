@@ -29,7 +29,7 @@ class rsyslog::client (
   $log_auth_local = false,
   $custom_config  = undef,
   $custom_params  = undef,
-  $server         = 'log',
+  $servers        = ['log'],
   $port           = '514'
 ) inherits rsyslog {
 
